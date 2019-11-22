@@ -1,0 +1,12 @@
+version: "3"
+services:
+  querystreamer:
+    image: "postgres:11"
+    container_name: "postgres"
+    command:  -c 'log_connections=true' -c 'log_disconnections=true'
+    environment:
+      - POSTGRES_USER=querystreamer
+      - POSTGRES_PASSWORD=querystreamer
+      - POSTGRES_DB=querystreamer
+    ports:
+      - "15432:5432"

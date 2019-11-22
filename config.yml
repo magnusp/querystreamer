@@ -1,0 +1,25 @@
+liquibase-database:
+  user: querystreamer
+  schema: public
+  password: querystreamer
+  url: jdbc:postgresql://localhost:15432/querystreamer
+
+database:
+  user: querystreamer
+  schema: public
+  password: querystreamer
+  url: jdbc:postgresql://localhost:15432/querystreamer
+  idleTimeout: 10000
+  poolSize: 2
+  maxLifetime: 30000
+
+logging:
+  additivity:
+    com.fortnox.reactivewizard.ReactiveWizardServer: false
+    se.fortnox.reactivewizard.jaxrs.JaxRsResource: false
+  levels:
+    com.fortnox.reactivewizard.ReactiveWizardServer: INFO
+    se.fortnox.reactivewizard.jaxrs.JaxRsResource: INFO
+  appenders:
+    stdout:
+      threshold: INFO
