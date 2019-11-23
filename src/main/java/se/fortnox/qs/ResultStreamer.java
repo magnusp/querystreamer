@@ -80,7 +80,7 @@ public class ResultStreamer {
                 }
             }
             try {
-                LOG.info("Requested: " + requested);
+                LOG.info("Requested: {}", requested);
                 Integer[] values = new Integer[requested.intValue()];
                 boolean gotNext;
                 int counter = -1;
@@ -91,9 +91,9 @@ public class ResultStreamer {
                     values[counter] = resultSet.getInt(1);
                     counter = counter +1;
                 }
-                LOG.info("Counter reached " + counter);
+                LOG.info("Counter reached {}", counter);
                 if (counter > 0) {
-                    LOG.info("Emitting " + counter);
+                    LOG.info("Emitting {}", counter);
                     observer.onNext(Observable.from(Arrays.copyOf(values, counter)));
                 }
                 if (!gotNext) {

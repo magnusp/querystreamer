@@ -17,8 +17,9 @@ import static rx.Observable.just;
 @Singleton
 @Path("/")
 public class DataResource {
-    private final Provider<ResultStreamer> resultStreamerProvider;
+    private static final String QUERY = "SELECT nbr FROM large ORDER BY nbr LIMIT 1000000";
     private static final int DEFAULT_BUFFER_SIZE = 999;
+    private final Provider<ResultStreamer> resultStreamerProvider;
 
     @Inject
     public DataResource(Provider<ResultStreamer> resultStreamerProvider) {
@@ -34,7 +35,7 @@ public class DataResource {
         }
         ResultStreamer resultStreamer = resultStreamerProvider.get();
         return resultStreamer
-                .query("SELECT nbr FROM large ORDER BY nbr LIMIT 1000000")
+                .query(QUERY)
                 .emission(bufferSize)
                 .concatMap(value -> just(new Holder(value)));
     }
