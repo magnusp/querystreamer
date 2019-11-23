@@ -15,6 +15,10 @@
         <assertj.version>3.12.2</assertj.version>
         <sonar.coverage.jacoco.xmlReportPaths>report/target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
         <autoVersionSubmodules>true</autoVersionSubmodules>
+        <sonar.projectKey>magnusp_querystreamer</sonar.projectKey>
+        <sonar.organization>magnusp</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.login>0d2b57857c74f8e457e84fbb1915b925563b941b</sonar.login>
     </properties>
 
     <dependencies>
@@ -53,16 +57,6 @@
     </dependencies>
     <dependencyManagement>
         <dependencies>
-            <!--<dependency>
-                <groupId>se.fortnox.reactivewizard</groupId>
-                <artifactId>reactivewizard-api</artifactId>
-                <version>${reactivewizard.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>se.fortnox.reactivewizard</groupId>
-                <artifactId>reactivewizard-jaxrs-api</artifactId>
-                <version>${reactivewizard.version}</version>
-            </dependency>-->
             <dependency>
                 <groupId>se.fortnox.reactivewizard</groupId>
                 <artifactId>reactivewizard-server</artifactId>
@@ -78,11 +72,6 @@
                 <artifactId>reactivewizard-dbmigrate</artifactId>
                 <version>${reactivewizard.version}</version>
             </dependency>
-           <!--<dependency>
-                <groupId>se.fortnox.reactivewizard</groupId>
-                <artifactId>reactivewizard-client</artifactId>
-                <version>${reactivewizard.version}</version>
-            </dependency>-->
             <dependency>
                 <groupId>se.fortnox.reactivewizard</groupId>
                 <artifactId>reactivewizard-logging</artifactId>
@@ -98,70 +87,16 @@
                 <artifactId>reactivewizard-bootstrap</artifactId>
                 <version>${reactivewizard.version}</version>
             </dependency>
-            <!--<dependency>
-                <groupId>com.auth0</groupId>
-                <artifactId>java-jwt</artifactId>
-                <version>3.5.0</version>
-            </dependency>
-            <dependency>
-                <groupId>com.github.seratch</groupId>
-                <artifactId>jslack</artifactId>
-                <version>1.5.7</version>
-            </dependency>
-            <dependency>
-                <groupId>com.auth0</groupId>
-                <artifactId>jwks-rsa</artifactId>
-                <version>0.7.0</version>
-            </dependency>
-            <dependency>
-                <groupId>javax.websocket</groupId>
-                <artifactId>javax.websocket-api</artifactId>
-                <version>1.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.glassfish.tyrus.bundles</groupId>
-                <artifactId>tyrus-standalone-client</artifactId>
-                <version>1.13</version>
-            </dependency>
-            <dependency>
-                <groupId>net.logstash.log4j</groupId>
-                <artifactId>jsonevent-layout</artifactId>
-                <version>1.7</version>
-            </dependency>-->
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
                 <version>2.9.8</version>
             </dependency>
-            <!--<dependency>
-                <groupId>se.fortnox.reactivewizard</groupId>
-                <artifactId>reactivewizard-test</artifactId>
-                <version>${reactivewizard.version}</version>
-                <scope>test</scope>
-            </dependency>-->
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
-            <!--<dependency>
-                <groupId>org.mockito</groupId>
-                <artifactId>mockito-all</artifactId>
-                <version>1.9.5</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.12</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.assertj</groupId>
-                <artifactId>assertj-core</artifactId>
-                <version>${assertj.version}</version>
-                <scope>test</scope>
-            </dependency>-->
         </dependencies>
     </dependencyManagement>
     <build>
