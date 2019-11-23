@@ -8,7 +8,8 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-
+import javax.ws.rs.QueryParam;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static rx.Observable.just;
@@ -17,6 +18,7 @@ import static rx.Observable.just;
 @Path("/")
 public class DataResource {
     private final Provider<ResultStreamer> resultStreamerProvider;
+    private static final int DEFAULT_BUFFER_SIZE = 999;
 
     @Inject
     public DataResource(Provider<ResultStreamer> resultStreamerProvider) {
@@ -26,20 +28,42 @@ public class DataResource {
     @Stream
     @Path("/data")
     @GET
-    public Observable<Holder> streamData() {
+    public Observable<Holder> streamData(@QueryParam("buffersize") Integer bufferSize) {
+        if(bufferSize == null) {
+            bufferSize = DEFAULT_BUFFER_SIZE;
+        }
         ResultStreamer resultStreamer = resultStreamerProvider.get();
-        return resultStreamer.emission(853).concatMap(value -> {
-            return just(new Holder(value));
-        });
+        return resultStreamer
+                .query("SELECT nbr FROM large ORDER BY nbr LIMIT 1000000")
+                .emission(bufferSize)
+                .concatMap(value -> just(new Holder(value)));
     }
 
     @Stream
     @Path("/data-delayed")
     @GET
-    public Observable<Holder> streamDataDelayed() {
+    public Observable<Holder> streamDataDelayed(@QueryParam("buffersize") Integer bufferSize) {
+        if(bufferSize == null) {
+            bufferSize = DEFAULT_BUFFER_SIZE;
+        }
         ResultStreamer resultStreamer = resultStreamerProvider.get();
-        return resultStreamer.delayedElementEmission(853, 50, TimeUnit.MICROSECONDS).concatMap(value -> {
-            return just(new Holder(value));
-        });
+        return resultStreamer
+                .query("SELECT nbr FROM large ORDER BY nbr LIMIT 1000000")
+                .delayedElementEmission(bufferSize, 50, TimeUnit.MICROSECONDS)
+                .concatMap(value -> just(new Holder(value)));
+    }
+
+    @Path("/no-stream")
+    @GET
+    public Observable<List<Holder>> nonStreamedData(@QueryParam("buffersize") Integer bufferSize) {
+        if(bufferSize == null) {
+            bufferSize = DEFAULT_BUFFER_SIZE;
+        }
+        ResultStreamer resultStreamer = resultStreamerProvider.get();
+        return resultStreamer
+                .query("SELECT nbr FROM large ORDER BY nbr LIMIT 1000000")
+                .emission(bufferSize)
+                .concatMap(value -> just(new Holder(value)))
+                .toList();
     }
 }

@@ -1,5 +1,7 @@
 package se.fortnox.qs;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.Observer;
 import rx.functions.Action2;
@@ -8,20 +10,24 @@ import rx.schedulers.Schedulers;
 import se.fortnox.reactivewizard.db.ConnectionProvider;
 
 import javax.inject.Inject;
-
 import java.sql.*;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static rx.Observable.just;
-
 public class ResultStreamer {
+    private static final Logger LOG = LoggerFactory.getLogger(ResultStreamer.class);
     private final ConnectionProvider connectionProvider;
+    private String query;
 
     @Inject
     public ResultStreamer(ConnectionProvider connectionProvider) {
         this.connectionProvider = connectionProvider;
+    }
+
+    public ResultStreamer query(String query) {
+        this.query= query;
+        return this;
     }
 
     public Observable<Integer> emission(int bufferSize) {
@@ -38,46 +44,64 @@ public class ResultStreamer {
     }
 
     private Observable<List<Integer>> createEmission(int bufferSize) {
+        QueryExecutor queryExecutor = new QueryExecutor(connectionProvider, query, bufferSize);
         return Observable
-                .create(AsyncOnSubscribe.createStateless(new QueryExecutor(connectionProvider, bufferSize)))
+                .create(AsyncOnSubscribe.createStateless(queryExecutor, () -> {
+                    try {
+                        queryExecutor.abort();
+                    } catch (SQLException e) {
+                        LOG.error("Exception", e);
+                    }
+                }))
                 .subscribeOn(Schedulers.io())
                 .buffer(bufferSize);
     }
 
     private static class QueryExecutor implements Action2<Long, Observer<Observable<? extends Integer>>> {
         private final ConnectionProvider connectionProvider;
-        private final ArrayList<Integer> buffer;
+        private final String query;
         private final int bufferSize;
         private ResultSet resultSet;
 
-        public QueryExecutor(ConnectionProvider connectionProvider, int bufferSize) {
+        public QueryExecutor(ConnectionProvider connectionProvider, String query, int bufferSize) {
             this.connectionProvider = connectionProvider;
-            this.buffer = new ArrayList<>(bufferSize);
+            this.query = query;
             this.bufferSize = bufferSize;
         }
 
         @Override
         public void call(Long requested, Observer<Observable<? extends Integer>> observer) {
-            if(resultSet == null) {
+            if (resultSet == null) {
                 try {
-                    resultSet = initialize(requested, bufferSize);
+                    resultSet = initialize(bufferSize);
                 } catch (Exception e) {
                     observer.onError(e);
                     return;
                 }
             }
             try {
-                buffer.clear();
-                while (resultSet.next() && buffer.size() < requested) {
-                    buffer.add(resultSet.getInt(1));
+                LOG.info("Requested: " + requested);
+                Integer[] values = new Integer[requested.intValue()];
+                boolean gotNext;
+                int counter = -1;
+                while ((gotNext = resultSet.next()) && counter < requested) {
+                    if(counter == -1) {
+                        counter = 0;
+                    }
+                    values[counter] = resultSet.getInt(1);
+                    counter = counter +1;
                 }
-                if(buffer.size() > 0 ) {
-                    observer.onNext(Observable.from(buffer));
+                LOG.info("Counter reached " + counter);
+                if (counter > 0) {
+                    LOG.info("Emitting " + counter);
+                    observer.onNext(Observable.from(Arrays.copyOf(values, counter)));
                 }
-                if(buffer.size() < requested) {
+                if (!gotNext) {
+                    LOG.info("Reached last row - completing.");
                     observer.onCompleted();
                     dispose(resultSet);
                 }
+
             } catch (SQLException sqlException) {
                 try {
                     dispose(resultSet);
@@ -95,15 +119,20 @@ public class ResultStreamer {
             connection.close();
         }
 
-        private ResultSet initialize(Long requested, int bufferSize) throws SQLException {
+        private ResultSet initialize(int bufferSize) throws SQLException {
             Connection connection = connectionProvider.get();
             connection.setAutoCommit(false);
 
-            PreparedStatement preparedStatement = connection.prepareStatement("SELECT nbr FROM large ORDER BY nbr LIMIT 6000", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.CLOSE_CURSORS_AT_COMMIT);
+            PreparedStatement preparedStatement = connection.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.CLOSE_CURSORS_AT_COMMIT);
             preparedStatement.setFetchSize(bufferSize);
             preparedStatement.closeOnCompletion();
 
             return preparedStatement.executeQuery();
+        }
+
+        public void abort() throws SQLException {
+            LOG.info("Stopping due to upstream unsubscribed");
+            dispose(resultSet);
         }
     }
 }
