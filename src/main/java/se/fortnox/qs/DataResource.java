@@ -13,81 +13,47 @@ import javax.ws.rs.Path;
 import javax.ws.rs.QueryParam;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static rx.Observable.just;
 
 @Singleton
 @Path("/")
 public class DataResource {
     private static final Logger LOG = LoggerFactory.getLogger(DataResource.class);
-    private static final String QUERY = "SELECT nbr FROM large ORDER BY nbr LIMIT 1000000";
+    private static final String QUERY = "SELECT nbr FROM large ORDER BY nbr LIMIT 19 OFFSET 999981";
     private static final int DEFAULT_BUFFER_SIZE = 999;
-    private final Provider<ResultStreamer<Integer>> resultStreamerProvider;
+    private final Provider<ResultStreamerBuilder<Holder>> resultStreamerBuilderProvider;
 
     @Inject
-    public DataResource(Provider<ResultStreamer<Integer>> resultStreamerProvider) {
-        this.resultStreamerProvider = resultStreamerProvider;
+    public DataResource(Provider<ResultStreamerBuilder<Holder>> resultStreamerBuilderProvider) {
+        this.resultStreamerBuilderProvider = resultStreamerBuilderProvider;
     }
 
     @Stream
-    @Path("/data")
+    @Path("/streamed-data")
     @GET
-    public Observable<List<Holder>> streamData(@QueryParam("buffersize") Integer bufferSize) {
-        if(bufferSize == null) {
-            bufferSize = DEFAULT_BUFFER_SIZE;
+    public Observable<Holder> streamedData(@QueryParam("fetchsize") Integer fetchSize) {
+        if(fetchSize == null) {
+            fetchSize = DEFAULT_BUFFER_SIZE;
         }
-        ResultStreamer<Integer> resultStreamer = resultStreamerProvider.get();
-        return resultStreamer
-                .query(QUERY, (preparedStatement) -> {}, (resultSet) -> {
+        ResultStreamer<Holder> resultStreamer = resultStreamerBuilderProvider
+                .get()
+                .query(QUERY)
+                .mappedBy(resultSet -> {
                     try {
-                        return resultSet.getInt(1);
+                        return new Holder(resultSet.getInt(1));
                     } catch (SQLException e) {
-                        return -1;
+                        return new Holder(-1);
                     }
                 })
-                .emission(bufferSize)
-                .concatMap(value -> just(new Holder(value)))
-            .buffer(100);
+                .build();
+        return resultStreamer
+                .emit(fetchSize)
+                .doOnError(x -> System.out.println(x));
     }
 
-    @Stream
-    @Path("/data-delayed")
+    @Path("/data")
     @GET
-    public Observable<Holder> streamDataDelayed(@QueryParam("buffersize") Integer bufferSize) {
-        if(bufferSize == null) {
-            bufferSize = DEFAULT_BUFFER_SIZE;
-        }
-        ResultStreamer<Integer> resultStreamer = resultStreamerProvider.get();
-        return resultStreamer
-            .query(QUERY, (preparedStatement) -> {}, (resultSet) -> {
-                try {
-                    return resultSet.getInt(1);
-                } catch (SQLException e) {
-                    return -1;
-                }
-            })
-                .delayedElementEmission(bufferSize, 50, TimeUnit.MICROSECONDS)
-                .concatMap(value -> just(new Holder(value)));
-    }
-
-    @Path("/no-stream")
-    @GET
-    public Observable<List<Holder>> nonStreamedData(@QueryParam("buffersize") Integer bufferSize) {
-        if(bufferSize == null) {
-            bufferSize = DEFAULT_BUFFER_SIZE;
-        }
-        ResultStreamer<Integer> resultStreamer = resultStreamerProvider.get();
-        return resultStreamer
-            .query(QUERY, (preparedStatement) -> {}, (resultSet) -> {
-                try {
-                    return resultSet.getInt(1);
-                } catch (SQLException e) {
-                    return -1;
-                }
-            })
-                .emission(bufferSize)
-                .concatMap(value -> just(new Holder(value)))
+    public Observable<List<Holder>> nonStreamedData(@QueryParam("fetchsize") Integer fetchSize) {
+        return streamedData(fetchSize)
                 .toList();
     }
 }
