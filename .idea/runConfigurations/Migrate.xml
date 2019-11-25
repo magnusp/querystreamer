@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Migrate" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="se.fortnox.reactivewizard.Main" />
+    <module name="querystreamer" />
+    <option name="PROGRAM_PARAMETERS" value="db-migrate config.yml" />
+    <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

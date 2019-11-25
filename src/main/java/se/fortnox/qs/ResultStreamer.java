@@ -14,11 +14,15 @@ import java.sql.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
-public class ResultStreamer {
-    private static final Logger LOG = LoggerFactory.getLogger(ResultStreamer.class);
-    private final ConnectionProvider connectionProvider;
-    private String query;
+public class ResultStreamer<R> {
+    private static final Logger         LOG = LoggerFactory.getLogger(ResultStreamer.class);
+    private final ConnectionProvider    connectionProvider;
+    private String                      query;
+    private Consumer<PreparedStatement> parameterBinder;
+    private Function<ResultSet, R> resultSetMapper;
 
     @Inject
     public ResultStreamer(ConnectionProvider connectionProvider) {
@@ -27,24 +31,33 @@ public class ResultStreamer {
 
     public ResultStreamer query(String query) {
         this.query= query;
+        this.parameterBinder = (statement) -> {};
+        this.resultSetMapper = (resultSet) -> null;
         return this;
     }
 
-    public Observable<Integer> emission(int bufferSize) {
+    public ResultStreamer<R> query(String query, Consumer<PreparedStatement> parameterBinder, Function<ResultSet, R> resultSetMapper) {
+        this.query = query;
+        this.parameterBinder = parameterBinder;
+        this.resultSetMapper = resultSetMapper;
+        return this;
+    }
+
+    public Observable<R> emission(int bufferSize) {
         return inOrder(createEmission(bufferSize));
 
     }
 
-    public Observable<Integer> delayedElementEmission(int bufferSize, int delay, TimeUnit timeUnit) {
+    public Observable<R> delayedElementEmission(int bufferSize, int delay, TimeUnit timeUnit) {
         return createEmission(bufferSize).concatMap(values -> Observable.from(values).delay(delay, timeUnit));
     }
 
-    private Observable<Integer> inOrder(Observable<List<Integer>> emission) {
+    private Observable<R> inOrder(Observable<List<R>> emission) {
         return emission.concatMap(Observable::from);
     }
 
-    private Observable<List<Integer>> createEmission(int bufferSize) {
-        QueryExecutor queryExecutor = new QueryExecutor(connectionProvider, query, bufferSize);
+    private Observable<List<R>> createEmission(int bufferSize) {
+        QueryExecutor queryExecutor = new QueryExecutor<R>(connectionProvider, query, parameterBinder, resultSetMapper, bufferSize);
         return Observable
                 .create(AsyncOnSubscribe.createStateless(queryExecutor, () -> {
                     try {
@@ -57,20 +70,30 @@ public class ResultStreamer {
                 .buffer(bufferSize);
     }
 
-    private static class QueryExecutor implements Action2<Long, Observer<Observable<? extends Integer>>> {
-        private final ConnectionProvider connectionProvider;
-        private final String query;
+    private class QueryExecutor<R> implements Action2<Long, Observer<Observable<R>>> {
+        private final ConnectionProvider          connectionProvider;
+        private final String                      query;
+        private final Function<ResultSet, R> resultMapper;
         private final int bufferSize;
-        private ResultSet resultSet;
+        private ResultSet                         resultSet;
+        private Consumer<PreparedStatement> parameterBinder;
 
-        public QueryExecutor(ConnectionProvider connectionProvider, String query, int bufferSize) {
+        public QueryExecutor(ConnectionProvider connectionProvider,
+            String query,
+            Consumer<PreparedStatement> parameterBinder,
+            Function<ResultSet, R> resultMapper,
+            int bufferSize
+        ) {
             this.connectionProvider = connectionProvider;
             this.query = query;
+            this.parameterBinder = parameterBinder;
+            this.resultMapper = resultMapper;
+
             this.bufferSize = bufferSize;
         }
 
         @Override
-        public void call(Long requested, Observer<Observable<? extends Integer>> observer) {
+        public void call(Long requested, Observer<Observable<R>> observer) {
             if (resultSet == null) {
                 try {
                     resultSet = initialize(bufferSize);
@@ -81,20 +104,21 @@ public class ResultStreamer {
             }
             try {
                 LOG.info("Requested: {}", requested);
-                Integer[] values = new Integer[requested.intValue()];
+                Object[] values = new Object[requested.intValue()];
                 boolean gotNext;
                 int counter = -1;
                 while ((gotNext = resultSet.next()) && counter < requested) {
                     if(counter == -1) {
                         counter = 0;
                     }
-                    values[counter] = resultSet.getInt(1);
+                    final R mapped = (R)resultSetMapper.apply(resultSet);
+                    values[counter] = mapped;
                     counter = counter +1;
                 }
                 LOG.info("Counter reached {}", counter);
                 if (counter > 0) {
                     LOG.info("Emitting {}", counter);
-                    observer.onNext(Observable.from(Arrays.copyOf(values, counter)));
+                    observer.onNext(Observable.from((R[])Arrays.copyOf(values, counter)));
                 }
                 if (!gotNext) {
                     LOG.info("Reached last row - completing.");
@@ -124,6 +148,7 @@ public class ResultStreamer {
             connection.setAutoCommit(false);
 
             PreparedStatement preparedStatement = connection.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.CLOSE_CURSORS_AT_COMMIT);
+            parameterBinder.accept(preparedStatement);
             preparedStatement.setFetchSize(bufferSize);
             preparedStatement.closeOnCompletion();
 
