@@ -18,7 +18,7 @@ import java.util.List;
 @Path("/")
 public class DataResource {
     private static final Logger LOG = LoggerFactory.getLogger(DataResource.class);
-    private static final String QUERY = "SELECT nbr FROM large ORDER BY nbr LIMIT 19 OFFSET 999981";
+    private static final String QUERY = "SELECT nbr FROM large ORDER BY nbr";
     private static final int DEFAULT_BUFFER_SIZE = 999;
     private final Provider<ResultStreamerBuilder<Holder>> resultStreamerBuilderProvider;
 
