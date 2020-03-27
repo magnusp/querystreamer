@@ -19,6 +19,7 @@
         <sonar.organization>magnusp</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.login>0d2b57857c74f8e457e84fbb1915b925563b941b</sonar.login>
+        <junit.version>4.12</junit.version>
     </properties>
 
     <dependencies>
@@ -54,6 +55,35 @@
             <groupId>se.fortnox.reactivewizard</groupId>
             <artifactId>reactivewizard-bootstrap</artifactId>
         </dependency>
+        <dependency>
+            <groupId>se.fortnox.reactivewizard</groupId>
+            <artifactId>reactivewizard-dbmigrate</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>se.fortnox.reactivewizard</groupId>
+            <artifactId>reactivewizard-config</artifactId>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>1.12.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>1.12.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>se.fortnox.reactivewizard</groupId>
+            <artifactId>reactivewizard-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -88,9 +118,31 @@
                 <version>${reactivewizard.version}</version>
             </dependency>
             <dependency>
+                <groupId>se.fortnox.reactivewizard</groupId>
+                <artifactId>reactivewizard-config</artifactId>
+                <version>${reactivewizard.version}</version>
+                <scope>test</scope>
+                <classifier>tests</classifier>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>se.fortnox.reactivewizard</groupId>
+                <artifactId>reactivewizard-test</artifactId>
+                <version>${reactivewizard.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
                 <version>2.9.8</version>
+            </dependency>
+            <dependency>
+                <groupId>se.fortnox.reactivewizard</groupId>
+                <artifactId>reactivewizard-jaxrs</artifactId>
+                <version>${reactivewizard.version}</version>
+                <classifier>tests</classifier>
+                <type>test-jar</type>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
